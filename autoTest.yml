@@ -1,0 +1,42 @@
+---
+- name: Apply PAN role
+  gather_facts: no
+  hosts: localhost
+
+  roles:
+   - PAN
+
+- name: validate generated t files syntax
+  gather_facts: no
+  hosts: localhost
+  
+  tasks:
+  - name: validate generated t files
+    shell: for f in t/*.t; do perl -T -c "$f"; done
+    register: res1
+  - name: Output validation results # **For debug purposes only - REMOVE TASK**
+    debug: var=res1.stderr_lines
+
+- name: check dependencies, copy and run t files
+  gather_facts: no
+  hosts: target # could be remote or localhost - pulled from "hosts" inventory
+
+  tasks:
+
+  #- name: check dependencies on target machine # PLACEHOLDER
+
+  - name: copy t file to target machine
+    copy: src=./t dest=~/
+    when: ansible_host != "localhost" # only copy t files over if remote host
+  
+  - name: run prove
+    command: prove -r -v
+    register: res2
+    failed_when: "'Result: NOTESTS' in res2.stdout_lines"
+
+  # Create 'outputs' directory and copy results to file
+  - file:
+      path: ./outputs
+      state: directory
+  - name: copy prove result to file
+    copy: content={{ res2.stdout }} dest=./outputs/prove_output.txt

@@ -1,0 +1,168 @@
+#!perl -T
+use 5.006;
+use strict;
+use warnings;
+
+#####################################
+# Device Details
+##################################### 
+
+# Device Details
+my $uri = 'https://{{ item.mgmt_ip }}';
+my $username = '{{ item.username }}';
+my $password = '{{ item.password }}';
+
+my $verify_ssl_hostname = 0;
+
+my $debug = 0;
+
+#####################################
+# Tests 
+##################################### 
+
+# General Tests
+{% for test in item.general_tests %}
+my ${{ test.name }} = {{ test.value }};
+{% endfor %}
+
+# Interface Tests
+{% if item.interface_tests is defined %}
+{% for test in item.interface_tests %}
+my @{{ test.name }} = (
+{% if test.interfaces is defined %}
+{% for inter in test.interfaces %}
+	{ interfaces => ['{{ inter.name }}'], description => '{{ inter.desc }}'  },
+{% endfor %}
+{% endif %}
+);
+
+{% endfor %}
+{% endif %}
+
+# Route Tests
+{% if item.route_tests is defined %}
+{% for test in item.route_tests %}
+my @{{ test.name }} = (
+{% if test.routes is defined %}
+{% for route in test.routes %}
+	{ routes => ['{{ route.ip_prefix }}'], description => '{{ route.desc }}'  },
+{% endfor %}
+{% endif %}
+);
+
+
+{% endfor %}
+{% endif %}
+
+# User-ID Tests
+{% if item.userID_tests is defined %}
+{% for test in item.userID_tests %}
+my @{{ test.name }} = (
+{% if test.name == 'ip_user_mapping' %}
+	{ domain => '{{ test.domain }}', users => ['{{ test.users }}'], description => '{{ test.desc }}' },
+{% elif test.name == 'server_monitor' %}
+	{ servers => ['{{ test.servers }}'], description => '{{ test.desc }}' },
+{% endif %}
+);
+
+
+{% endfor %}
+{% endif %}
+
+# Routing Protocol Tests
+{% if item.routing_tests is defined %}
+{% for test in item.routing_tests %}
+my @{{ test.name }} = (
+{% if test.name == 'bgp_peer_tests' %}
+	{ peer_ips => ['{{ test.peer_ips }}'], description => '{{ test.desc }}'  },
+{% endif %}
+);
+
+
+{% endfor %}
+{% endif %}
+
+
+#####################################
+# map_test()
+# * Takes a SUB and a list of 
+#   HASHREFs
+#
+# * Each HASHREF should contain a
+#   description =>, as well as the
+#   arguments to pass to the SUB
+##################################### 
+
+
+sub map_test {
+    my $tester_sub = shift;
+    my @tests = @_;
+
+    die "First argument to map_test() must be a sub" if ref $tester_sub ne 'CODE';
+
+    # Passed to the map{} function below.
+    my $execute_test = sub {
+        my $test_arguments = shift;
+
+        my $description = delete $test_arguments->{description};
+
+        ok( $tester_sub->( %{ $test_arguments }  ), $description );
+    };
+
+    map { $execute_test->($_) } @tests;
+}
+
+
+
+
+
+########################################
+# Actual tests execution is below.
+# You shouldn't have too edit anything 
+# below this point
+########################################
+
+use Test::More qw{no_plan};
+
+BEGIN {
+    use_ok( 'Device::PaloAlto::Firewall' ) || print "Could not load Device::PaloAlto::Firewall\n";
+}
+
+my $firewall = Device::PaloAlto::Firewall->new(uri => $uri, username => $username, password => $password, debug => $debug);
+my $tester = $firewall->tester();
+
+$firewall->verify_hostname($verify_ssl_hostname);
+
+ok( $tester->environmentals(), "Device Environmentals (Power, Fan, Temp)" ) if $environmentals;
+ok( $tester->ntp_synchronised(), "NTP is synchronised" ) if $ntp_synchronised;
+ok( $tester->ntp_reachable(), "Configured NTP servers are reachable" ) if $ntp_reachable;
+
+ok( $tester->ha_enabled(), "HA is enabled on the firewall" ) if $ha_enabled;
+ok( $tester->ha_version(), "PAN-OS, App, Vulnerability and GlobalProtect version match between peers" ) if $ha_version;
+ok( $tester->ha_peer_up(), "HA peer and interfaces are up" ) if $ha_peer_up;
+ok( $tester->ha_config_sync(), "Config is synchronised between the firewalls" ) if $ha_config_sync;
+
+{% if item.userID_tests is defined %}
+# IP user mapping
+map_test( sub { $tester->ip_user_mapping(@_) }, @ip_user_mapping);
+{% endif %}
+
+{% if item.interface_tests is defined %}
+# Interface status
+map_test(sub { $tester->interfaces_up(@_) }, @interface_tests);
+
+# Interface duplex
+map_test(sub { $tester->interfaces_duplex(@_) }, @interface_duplex_tests);
+{% endif %}
+
+{% if item.route_tests is defined %}
+# Routes
+map_test(sub { $tester->routes_exist(@_) }, @route_tests);
+{% endif %}
+
+{% if item.routing_tests is defined %}
+# BGP Peers
+map_test(sub { $tester->bgp_peers_up(@_) }, @bgp_peer_tests);
+{% endif %}
+
+

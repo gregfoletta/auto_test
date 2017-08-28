@@ -1,0 +1,59 @@
+---
+firewalls:
+  - hostname: #
+    profile: tFile
+    mgmt_ip: #
+    username: #
+    password: #
+    general_tests: # This is a test classification - remove if no tests cases defined under classification
+      - name: environmentals 
+        value: 0
+      - name: ntp_synchronised
+        value: 0
+      - name: ntp_reachable
+        value: 0
+      - name: ha_enabled
+        value: 0
+      - name: ha_state
+        value: 0
+      - name: ha_version
+        value: 0
+      - name: ha_peer_up
+        value: 0
+      - name: ha_config_sync
+        value: 0
+    interface_tests: # This is a test classification - remove if no test cases defined under classification
+      - name: interface_tests # This is a test case - remove (including corresponding parameters below) if not required
+        interfaces: 
+          - name: ##
+            desc: ##
+      - name: interface_duplex_tests # This is a test case - remove (including corresponding parameters below) if not required
+        interfaces:
+          - name: ##
+            desc: ##
+    route_tests: # This is a test classification - remove if no test cases defined under classification
+      - name: route_tests # This is a test case - remove (including corresponding parameters below) if not required
+        routes:
+          - ip_prefix: ##
+            desc: ##
+    userID_tests: # This is a test classification - remove if no test cases defined under classification
+      - name: ip_user_mapping # This is a test case - remove (including corresponding parameters below) if not required
+        domain: ##
+        users: ##
+        desc: ##
+      - name: server_monitor # This is a test case - remove (including corresponding parameters below) if not required
+        servers: ##
+        desc: ##
+    routing_tests: # This is a test classification - remove if no test cases defined under classification
+      - name: bgp_peer_tests # This is a test case - remove (including corresponding parameters below) if not required
+        peer_ips: ##
+        desc: ##
+
+# KEY #
+# = Required
+## = Required if test listed
+
+# Tests not requried MUST be removed (i.e. tests within test classifications interface_tests, route_tests, userID_tests, routing_tests)
+# If no tests are listed under a test classification heading (e.g. route_tests or interface_tests), the test classification MUST be removed.
+
+# For multiple hosts, duplicate from hostname down.

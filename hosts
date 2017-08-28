@@ -1,0 +1,3 @@
+[target]
+localhost ansible_connection=local # remove if remote host
+# insert some remote host here... 

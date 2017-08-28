@@ -1,0 +1,9 @@
+---
+# Create 't' directory and generate t files
+- file:
+    path: ./t
+    state: directory
+
+- name: Generate t files
+  template: src={{ item.profile }}.j2 dest=t/{{ item.hostname }}.t
+  with_items: "{{ firewalls }}"
